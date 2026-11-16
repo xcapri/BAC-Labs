@@ -1,0 +1,41 @@
+{
+  "name": "labs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "recon": "node recon-service/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/node": "^24.8.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "autoprefixer": "^10.4.21",
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.4.1",
+    "jose": "^6.1.0",
+    "next": "^15.5.5",
+    "postcss": "^8.5.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/better-sqlite3": "^7.6.13"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.4.1": true,
+    "@tailwindcss/oxide@4.1.14": true,
+    "sharp@0.34.4": true
+  }
+}
