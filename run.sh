@@ -42,6 +42,15 @@ if [ "$NODE_MAJOR" -lt 22 ]; then
 fi
 echo "[+] Node.js $(node -v)"
 
+# --- Stop leftover services from a previous run (avoid duplicates) ----------
+pkill -f "next dev" 2>/dev/null || true
+pkill -f "next-server" 2>/dev/null || true
+pkill -f "recon-service/server.js" 2>/dev/null || true
+pkill -f "tiketlab/server.js" 2>/dev/null || true
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  (cd sqli-mysql && docker compose down >/dev/null 2>&1) || true
+fi
+
 # --- 2. Find free ports (probe 127.0.0.1, first free wins) ------------------
 find_free_port() {
   local port="${1:-3000}"
@@ -149,12 +158,15 @@ RECON_PID=$!
 HOST=0.0.0.0 PORT="$TIKETLAB_PORT" node tiketlab/server.js > .tiketlab.log 2>&1 &
 TIKETLAB_PID=$!
 
-# Stop both background services when this script exits (e.g. main app stops).
+# Stop all services when this script exits (e.g. main app stops, or Ctrl+C).
 cleanup() {
   kill "$RECON_PID" 2>/dev/null || true
   kill "$TIKETLAB_PID" 2>/dev/null || true
+  if [ "$SQLI_MYSQL_UP" = 1 ]; then
+    (cd sqli-mysql && docker compose down >/dev/null 2>&1) || true
+  fi
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM
 
 echo
 echo "  Main app       : http://localhost:$MAIN_PORT/login   (user/user123)"
