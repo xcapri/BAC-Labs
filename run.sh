@@ -89,6 +89,9 @@ watch_sqli_mysql() {
     fi
     tries=$((tries + 1))
     sleep 2
+    if [ $((tries % 5)) -eq 0 ]; then
+      echo "[.] SQLi MySQL lab still building... ($((tries * 2))s elapsed)"
+    fi
   done
   echo
   echo "[!] SQLi MySQL lab still building after ~4 min. Check: sqli-mysql/.sqli-mysql.log"
