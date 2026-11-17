@@ -26,6 +26,8 @@ yarn-debug.log*
 yarn-error.log*
 .recon-service.log
 .tiketlab.log
+.sqli-mysql.log
+.sqli-mysql-port
 
 # local env files
 .env*.local

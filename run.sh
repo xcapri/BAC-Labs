@@ -9,10 +9,11 @@
 #  ports are already taken on the participant's machine. Safe to stop (Ctrl+C)
 #  and re-run — each run finds fresh free ports.
 #
-#  Starts three services on separate ports:
-#    1. main app   (BAC-Labs)             -> printed
-#    2. TiketLab   (challenge target)     -> printed
-#    3. recon      (legacy-report-service)-> hidden, find it with nmap
+#  Starts four targets on separate ports:
+#    1. main app      (BAC-Labs)               -> printed
+#    2. TiketLab      (AI practice target)     -> printed
+#    3. SQLi MySQL    (sqlmap full dump)       -> printed (port 3005)
+#    4. recon         (legacy-report-service)  -> hidden, find it with nmap
 #
 #  On WSL it also prints the WSL IP and the Windows host IP, and best-effort
 #  opens the Windows firewall for those ports so the lab is reachable from
@@ -68,8 +69,32 @@ WIN_IP="$(ipconfig.exe 2>/dev/null | tr -d '\r' | grep -i 'IPv4' | grep -oE '([0
 # forwarding still works from the Windows browser, so this is non-fatal.
 if command -v powershell.exe >/dev/null 2>&1; then
   powershell.exe -NoProfile -Command \
-    "New-NetFirewallRule -DisplayName 'BAC-Labs Workshop' -Direction Inbound -Protocol TCP -LocalPort $MAIN_PORT,$RECON_PORT,$TIKETLAB_PORT -Action Allow -ErrorAction SilentlyContinue" \
+    "New-NetFirewallRule -DisplayName 'BAC-Labs Workshop' -Direction Inbound -Protocol TCP -LocalPort $MAIN_PORT,$RECON_PORT,$TIKETLAB_PORT,3005 -Action Allow -ErrorAction SilentlyContinue" \
     >/dev/null 2>&1 || true
+fi
+
+# --- 4. Docker + SQLi MySQL lab (full sqlmap practice) -----------------------
+SQLI_MYSQL_UP=0
+SQLI_MYSQL_PORT="$(find_free_port 3005)"
+# Write the chosen port so the BAC-Labs dashboard card can link to it.
+echo "$SQLI_MYSQL_PORT" > .sqli-mysql-port
+
+if docker info >/dev/null 2>&1; then
+  echo "[+] Docker ready. Starting the SQLi MySQL lab on port $SQLI_MYSQL_PORT..."
+elif command -v docker >/dev/null 2>&1 || command -v apt-get >/dev/null 2>&1; then
+  echo "[+] Docker not running. Installing/starting Docker (best-effort)..."
+  command -v apt-get >/dev/null 2>&1 && sudo apt-get install -y docker.io docker-compose-v2 >/dev/null 2>&1
+  sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null || (sudo dockerd >/tmp/dockerd.log 2>&1 &)
+  sleep 5
+fi
+
+if docker info >/dev/null 2>&1; then
+  (cd sqli-mysql && SQLI_MYSQL_PORT="$SQLI_MYSQL_PORT" docker compose up -d --build > .sqli-mysql.log 2>&1 &)
+  SQLI_MYSQL_UP=1
+  echo "[+] SQLi MySQL lab starting on http://localhost:$SQLI_MYSQL_PORT (first build pulls MySQL, may take a minute)"
+else
+  echo "[!] Docker is not available; skipping the MySQL SQLi lab."
+  echo "    To run it later:  cd sqli-mysql && docker compose up --build"
 fi
 
 # --- 4. Optional DB reset ---------------------------------------------------
@@ -103,6 +128,9 @@ trap cleanup EXIT
 echo
 echo "  Main app       : http://localhost:$MAIN_PORT/login   (user/user123)"
 echo "  TiketLab       : http://localhost:$TIKETLAB_PORT      (AI practice target)"
+if [ "$SQLI_MYSQL_UP" = 1 ]; then
+  echo "  SQLi MySQL lab : http://localhost:$SQLI_MYSQL_PORT/search?q=laptop   (sqlmap full dump)"
+fi
 if [ -n "$WSL_IP" ]; then
   echo "  WSL IP         : http://$WSL_IP:$MAIN_PORT   (from Windows / other WSL)"
 fi

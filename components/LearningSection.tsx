@@ -1,6 +1,19 @@
 import Link from 'next/link';
+import fs from 'fs';
+import path from 'path';
+
+function getSqliPort(): string {
+  try {
+    const port = fs.readFileSync(path.join(process.cwd(), '.sqli-mysql-port'), 'utf8').trim();
+    if (/^\d{1,5}$/.test(port)) return port;
+  } catch {
+    // ignore: fall back to the default
+  }
+  return '3005';
+}
 
 export default function LearningSection() {
+  const sqliPort = getSqliPort();
   return (
     <div className="border-t-4 border-yellow-400 pt-8 mt-12">
       <div className="card bg-yellow-50 border border-yellow-300 mb-6">
@@ -274,6 +287,25 @@ export default function LearningSection() {
                 Input host di-concat ke perintah shell (ping).
               </p>
             </Link>
+
+            {/* SQLi MySQL (sqlmap full dump) */}
+            <a href={`http://localhost:${sqliPort}`} target="_blank" rel="noopener noreferrer" className="card hover:shadow-xl transition-shadow cursor-pointer border-2 border-lime-300">
+              <div className="flex items-start mb-4">
+                <div className="bg-lime-500 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-sm mr-4">
+                  SQLI-M
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-lime-600 mb-2">SQLi MySQL</h3>
+                  <span className="text-xs bg-lime-100 text-lime-800 px-2 py-1 rounded">VULNERABLE</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-700 mb-2">
+                <strong>SQLi on MySQL (sqlmap full dump)</strong>
+              </p>
+              <p className="text-xs text-gray-600">
+                Separate app; sqlmap can dump tables, columns, data.
+              </p>
+            </a>
           </div>
         </div>
       </div>
