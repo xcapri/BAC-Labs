@@ -79,22 +79,34 @@ SQLI_MYSQL_PORT="$(find_free_port 3005)"
 # Write the chosen port so the BAC-Labs dashboard card can link to it.
 echo "$SQLI_MYSQL_PORT" > .sqli-mysql-port
 
-if docker info >/dev/null 2>&1; then
-  echo "[+] Docker ready. Starting the SQLi MySQL lab on port $SQLI_MYSQL_PORT..."
-elif command -v docker >/dev/null 2>&1 || command -v apt-get >/dev/null 2>&1; then
-  echo "[+] Docker not running. Installing/starting Docker (best-effort)..."
-  command -v apt-get >/dev/null 2>&1 && sudo apt-get install -y docker.io docker-compose-v2 >/dev/null 2>&1
-  sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null || (sudo dockerd >/tmp/dockerd.log 2>&1 &)
-  sleep 5
-fi
-
-if docker info >/dev/null 2>&1; then
+start_sqli_mysql() {
   (cd sqli-mysql && SQLI_MYSQL_PORT="$SQLI_MYSQL_PORT" docker compose up -d --build > .sqli-mysql.log 2>&1 &)
   SQLI_MYSQL_UP=1
-  echo "[+] SQLi MySQL lab starting on http://localhost:$SQLI_MYSQL_PORT (first build pulls MySQL, may take a minute)"
+  echo "[+] SQLi MySQL lab starting on http://localhost:$SQLI_MYSQL_PORT (first build may take a minute)"
+}
+
+if docker info >/dev/null 2>&1; then
+  echo "[+] Docker ready. Starting the SQLi MySQL lab..."
+  start_sqli_mysql
+elif command -v docker >/dev/null 2>&1; then
+  echo "[!] Docker CLI is present but the daemon is not reachable."
+  echo "    If you run Docker Desktop on Windows, enable WSL integration for this"
+  echo "    distro: Docker Desktop -> Settings -> Resources -> WSL Integration."
+  echo "    Skipping the MySQL SQLi lab; everything else still runs."
 else
-  echo "[!] Docker is not available; skipping the MySQL SQLi lab."
-  echo "    To run it later:  cd sqli-mysql && docker compose up --build"
+  echo "[+] Docker not found. Installing Docker Engine (best-effort)..."
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get install -y docker.io docker-compose-v2 >/dev/null 2>&1 || true
+    (sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null || (sudo dockerd >/tmp/dockerd.log 2>&1 &)) || true
+    sleep 5
+  fi
+  if docker info >/dev/null 2>&1; then
+    echo "[+] Docker ready. Starting the SQLi MySQL lab..."
+    start_sqli_mysql
+  else
+    echo "[!] Could not start Docker automatically. Skipping the MySQL SQLi lab."
+    echo "    Manual: cd sqli-mysql && docker compose up --build"
+  fi
 fi
 
 # --- 4. Optional DB reset ---------------------------------------------------
