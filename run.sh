@@ -79,10 +79,26 @@ SQLI_MYSQL_PORT="$(find_free_port 3005)"
 # Write the chosen port so the BAC-Labs dashboard card can link to it.
 echo "$SQLI_MYSQL_PORT" > .sqli-mysql-port
 
+watch_sqli_mysql() {
+  local tries=0
+  while [ "$tries" -lt 120 ]; do
+    if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "http://localhost:$SQLI_MYSQL_PORT/search?q=laptop" 2>/dev/null)" = "200" ]; then
+      echo
+      echo "[+] SQLi MySQL lab READY: http://localhost:$SQLI_MYSQL_PORT/search?q=laptop"
+      return 0
+    fi
+    tries=$((tries + 1))
+    sleep 2
+  done
+  echo
+  echo "[!] SQLi MySQL lab still building after ~4 min. Check: sqli-mysql/.sqli-mysql.log"
+}
+
 start_sqli_mysql() {
   (cd sqli-mysql && SQLI_MYSQL_PORT="$SQLI_MYSQL_PORT" docker compose up -d --build > .sqli-mysql.log 2>&1 &)
   SQLI_MYSQL_UP=1
-  echo "[+] SQLi MySQL lab starting on http://localhost:$SQLI_MYSQL_PORT (first build may take a minute)"
+  echo "[+] SQLi MySQL lab building on http://localhost:$SQLI_MYSQL_PORT (watch below for READY)"
+  watch_sqli_mysql &
 }
 
 if docker info >/dev/null 2>&1; then
@@ -141,7 +157,7 @@ echo
 echo "  Main app       : http://localhost:$MAIN_PORT/login   (user/user123)"
 echo "  TiketLab       : http://localhost:$TIKETLAB_PORT      (AI practice target)"
 if [ "$SQLI_MYSQL_UP" = 1 ]; then
-  echo "  SQLi MySQL lab : http://localhost:$SQLI_MYSQL_PORT/search?q=laptop   (sqlmap full dump)"
+  echo "  SQLi MySQL lab : http://localhost:$SQLI_MYSQL_PORT/search?q=laptop   (building... see READY below)"
 fi
 if [ -n "$WSL_IP" ]; then
   echo "  WSL IP         : http://$WSL_IP:$MAIN_PORT   (from Windows / other WSL)"
